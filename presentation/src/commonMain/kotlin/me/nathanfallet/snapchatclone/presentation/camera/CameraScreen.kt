@@ -175,7 +175,7 @@ private fun CameraContent(
             // The barcode scanner (ML Kit on Android) reads YUV frames; the SkiaCamera still draws them as textures.
             pixelFormat = TargetVideoPixelFormat.YUV,
             controllerConfiguration = CameraControllerConfiguration(
-                enableLowLightBoost = state.isNightModeEnabled && device?.supportsLowLightBoost == true,
+                enableLowLightBoost = lowLightBoostSetting(state.isNightModeEnabled, device?.supportsLowLightBoost),
             ),
             ref = camera,
             onControllerChanged = { it?.let { viewModel.onCameraReady(it.minZoom, it.maxZoom, it.zoom) } },
