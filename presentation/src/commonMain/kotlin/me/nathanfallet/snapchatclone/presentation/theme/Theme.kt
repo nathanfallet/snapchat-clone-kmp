@@ -32,8 +32,8 @@ internal val AppColorScheme = darkColorScheme(
 )
 
 /**
- * The color of the text and icons that don't choose one. Outside of a `Surface`, Compose draws them in black by default,
- * which is invisible on the black background of the app.
+ * The color of the text and icons that don't choose one. Outside of a `Surface`, Compose draws them in black by
+ * default, which is invisible on the black background of the app.
  */
 internal val DefaultContentColor = AppColorScheme.onBackground
 

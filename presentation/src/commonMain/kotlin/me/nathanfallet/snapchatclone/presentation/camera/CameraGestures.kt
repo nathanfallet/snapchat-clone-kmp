@@ -143,7 +143,9 @@ private suspend fun AwaitPointerEventScope.trackPinch(onPinch: (Float) -> Unit) 
 
 /** Waits until every finger is lifted. */
 private suspend fun AwaitPointerEventScope.awaitAllUp() {
-    while (awaitPointerEvent().pressedCount() > 0) Unit
+    do {
+        val event = awaitPointerEvent()
+    } while (event.pressedCount() > 0)
 }
 
 private fun PointerEvent.pressedCount() = changes.count { it.pressed }
