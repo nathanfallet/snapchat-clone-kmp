@@ -60,6 +60,8 @@ import me.nathanfallet.visioncamera.TargetCameraPosition
 import me.nathanfallet.visioncamera.TargetPhotoContainerFormat
 import me.nathanfallet.visioncamera.TargetVideoPixelFormat
 import me.nathanfallet.visioncamera.VideoOutputOptions
+import me.nathanfallet.visioncamera.barcode.TargetBarcodeFormat
+import me.nathanfallet.visioncamera.barcode.compose.rememberBarcodeScanner
 import me.nathanfallet.visioncamera.compose.rememberCameraDevice
 import me.nathanfallet.visioncamera.compose.rememberCameraPermission
 import me.nathanfallet.visioncamera.compose.rememberMicrophonePermission
@@ -147,6 +149,8 @@ private fun CameraContent(
     // Read on the Frame output's thread, which draws the preview: the painter compiles each filter's shader once.
     val previewFilter by rememberUpdatedState(state.previewFilter)
     val filterPainter = remember { FilterPainter() }
+    // QR codes are scanned in the frames drawn by the SkiaCamera, while a scan is in progress (a long press).
+    val barcodeScanner = rememberBarcodeScanner(listOf(TargetBarcodeFormat.QR_CODE))
 
     // Applies the zoom of the ViewModel (pinch, slide while recording) to the camera.
     val controller = camera.controller
@@ -161,9 +165,14 @@ private fun CameraContent(
             isActive = isActive,
             onFrame = { frame, render ->
                 render { (frameTexture, canvas) -> filterPainter.draw(canvas, frameTexture, previewFilter) }
+                if (viewModel.isScanning) {
+                    scanCodes { barcodeScanner.scanCodes(frame).mapNotNull { it.rawValue } }
+                        ?.let(viewModel::onCodesScanned)
+                }
                 frame.dispose()
             },
             outputs = listOf(photoOutput, videoOutput),
+            // The barcode scanner (ML Kit on Android) reads YUV frames; the SkiaCamera still draws them as textures.
             pixelFormat = TargetVideoPixelFormat.YUV,
             controllerConfiguration = CameraControllerConfiguration(
                 enableLowLightBoost = state.isNightModeEnabled && device?.supportsLowLightBoost == true,
@@ -177,7 +186,7 @@ private fun CameraContent(
                     scope.launch { attempt { camera.focusTo(offset) } }
                 },
                 onDoubleTap = viewModel::flipCamera,
-                onLongPress = {},
+                onLongPress = { viewModel.startScan() },
                 onPinch = viewModel::onPinch,
                 onSwipe = { swipe ->
                     when (swipe) {
@@ -237,6 +246,8 @@ private fun CameraContent(
             onRecordingSlide = viewModel::onRecordingSlide,
             onStopRecording = viewModel::stopRecording,
         )
+
+        ScanOverlay(scan = state.scan, onDismiss = viewModel::dismissScan)
 
         // The screen flash: the front camera has no flash, the screen lights the face up instead.
         if (state.isScreenFlashVisible) {

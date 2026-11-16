@@ -32,6 +32,15 @@ internal suspend fun attempt(block: suspend () -> Unit) {
     }
 }
 
+/** Runs a barcode [scan] on a frame, logging its failures: the frame is then simply skipped. */
+@Suppress("TooGenericExceptionCaught")
+internal fun scanCodes(scan: () -> List<String>): List<String>? = try {
+    scan()
+} catch (e: Exception) {
+    println("Barcode scan failed: ${e.message}")
+    null
+}
+
 /** Whether a displayed zoom (`1.0` for the neutral zoom) is worth showing to the user. */
 internal fun Double.isZoomedIn() = this > ZOOM_LABEL_THRESHOLD
 

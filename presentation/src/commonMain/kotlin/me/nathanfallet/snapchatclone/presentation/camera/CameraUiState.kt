@@ -2,6 +2,7 @@ package me.nathanfallet.snapchatclone.presentation.camera
 
 import me.nathanfallet.snapchatclone.domain.models.Filter
 import me.nathanfallet.snapchatclone.domain.models.MemoryDraft
+import me.nathanfallet.snapchatclone.domain.models.ScannedCode
 
 /** Which camera is used. */
 enum class CameraFacing {
@@ -19,6 +20,25 @@ enum class CameraFacing {
  * @property isStopping Whether the recording was asked to stop and is finishing its file.
  */
 data class RecordingUiState(val progress: Float = 0f, val isStopping: Boolean = false)
+
+/** The QR code scan started by a long press on the preview. */
+sealed interface ScanUiState {
+    /** No scan. */
+    data object Idle : ScanUiState
+
+    /** The camera frames are scanned for a code. */
+    data object Scanning : ScanUiState
+
+    /**
+     * A code was found.
+     *
+     * @property code The scanned code.
+     */
+    data class Found(val code: ScannedCode) : ScanUiState
+
+    /** No code was found in time. */
+    data object NotFound : ScanUiState
+}
 
 /**
  * A captured snap, shown in the preview screen.
@@ -41,6 +61,7 @@ data class SnapUiState(val draft: MemoryDraft, val isSaving: Boolean = false)
  * @property isCapturingPhoto Whether a photo is being captured or processed.
  * @property isScreenFlashVisible Whether the white screen flash covers the screen.
  * @property recording The video being recorded, if any.
+ * @property scan The QR code scan.
  * @property snap The captured snap to preview, if any.
  * @property message A short message to show the user, if any.
  */
@@ -55,6 +76,7 @@ data class CameraUiState(
     val isCapturingPhoto: Boolean = false,
     val isScreenFlashVisible: Boolean = false,
     val recording: RecordingUiState? = null,
+    val scan: ScanUiState = ScanUiState.Idle,
     val snap: SnapUiState? = null,
     val message: String? = null,
 ) {

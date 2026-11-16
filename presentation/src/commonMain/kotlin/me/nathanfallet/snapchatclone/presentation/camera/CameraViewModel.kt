@@ -15,6 +15,7 @@ import me.nathanfallet.snapchatclone.domain.models.GeoPoint
 import me.nathanfallet.snapchatclone.domain.models.MediaSource
 import me.nathanfallet.snapchatclone.domain.models.MemoryDraft
 import me.nathanfallet.snapchatclone.domain.models.MemoryType
+import me.nathanfallet.snapchatclone.domain.models.ScannedCode
 import me.nathanfallet.snapchatclone.domain.usecases.DiscardCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.ReadCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.SaveMemoryUseCase
@@ -23,6 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -56,6 +58,7 @@ class CameraViewModel(
 
     private var filterNameJob: Job? = null
     private var messageJob: Job? = null
+    private var scanJob: Job? = null
 
     // The recording in progress (see startRecording).
     private var stopRecordingFunction: (suspend () -> Unit)? = null
@@ -287,6 +290,47 @@ class CameraViewModel(
         recordingStartZoom = null
     }
 
+    // QR code scan
+
+    /** Whether the camera frames should be scanned for a code. Read from the camera's frame thread. */
+    val isScanning: Boolean get() = state.value.scan == ScanUiState.Scanning
+
+    /**
+     * Starts scanning the camera frames for a QR code (a long press on the preview). The scan gives up after
+     * [SCAN_TIMEOUT].
+     */
+    fun startScan() {
+        if (state.value.isBusy) return
+        state.update { it.copy(scan = ScanUiState.Scanning) }
+        scanJob?.cancel()
+        scanJob = viewModelScope.launch {
+            delay(SCAN_TIMEOUT)
+            if (state.value.scan != ScanUiState.Scanning) return@launch
+            state.update { it.copy(scan = ScanUiState.NotFound) }
+            showMessage("No QR code found")
+            delay(MESSAGE_DURATION)
+            state.update { if (it.scan == ScanUiState.NotFound) it.copy(scan = ScanUiState.Idle) else it }
+        }
+    }
+
+    /**
+     * Reports the [values] of the codes found in a camera frame, from any thread. The first one ends the scan.
+     */
+    fun onCodesScanned(values: List<String>) {
+        val value = values.firstOrNull { it.isNotBlank() } ?: return
+        viewModelScope.launch {
+            if (state.value.scan != ScanUiState.Scanning) return@launch
+            scanJob?.cancel()
+            state.update { it.copy(scan = ScanUiState.Found(ScannedCode(value))) }
+        }
+    }
+
+    /** Closes the scanned code's card. */
+    fun dismissScan() {
+        scanJob?.cancel()
+        state.update { it.copy(scan = ScanUiState.Idle) }
+    }
+
     // Snap preview
 
     /** Saves the previewed snap to the Memories, and goes back to the camera. */
@@ -346,6 +390,9 @@ class CameraViewModel(
 
         /** How often the recording progress is updated. */
         val PROGRESS_INTERVAL = 50.milliseconds
+
+        /** How long a scan looks for a code before giving up. */
+        val SCAN_TIMEOUT = 6.seconds
 
         /** How long a message stays on screen. */
         val MESSAGE_DURATION = 2_500.milliseconds

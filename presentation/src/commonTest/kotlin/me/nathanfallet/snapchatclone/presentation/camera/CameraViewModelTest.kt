@@ -17,6 +17,7 @@ import me.nathanfallet.snapchatclone.domain.models.MediaSource
 import me.nathanfallet.snapchatclone.domain.models.Memory
 import me.nathanfallet.snapchatclone.domain.models.MemoryDraft
 import me.nathanfallet.snapchatclone.domain.models.MemoryType
+import me.nathanfallet.snapchatclone.domain.models.ScannedCode
 import me.nathanfallet.snapchatclone.domain.usecases.DiscardCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.ReadCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.SaveMemoryUseCase
@@ -369,6 +370,44 @@ class CameraViewModelTest {
         runCurrent()
         assertEquals(1, discarded.size)
         assertTrue(saved.isEmpty())
+    }
+
+    @Test
+    fun aLongPressScansUntilACodeIsFound() = runTest(dispatcher) {
+        val viewModel = readyViewModel()
+        assertFalse(viewModel.isScanning)
+        viewModel.startScan()
+        assertTrue(viewModel.isScanning)
+        viewModel.onCodesScanned(listOf("", "https://example.com"))
+        runCurrent()
+        assertEquals(
+            ScanUiState.Found(ScannedCode("https://example.com")),
+            viewModel.uiState.value.scan,
+        )
+        assertFalse(viewModel.isScanning)
+        // Codes found afterwards don't replace the card.
+        viewModel.onCodesScanned(listOf("other"))
+        runCurrent()
+        assertEquals("https://example.com", (viewModel.uiState.value.scan as ScanUiState.Found).code.value)
+        // The timeout of the found scan was cancelled.
+        advanceTimeBy(CameraViewModel.SCAN_TIMEOUT * 2)
+        assertTrue(viewModel.uiState.value.scan is ScanUiState.Found)
+        viewModel.dismissScan()
+        assertEquals(ScanUiState.Idle, viewModel.uiState.value.scan)
+    }
+
+    @Test
+    fun aScanGivesUpAfterItsTimeout() = runTest(dispatcher) {
+        val viewModel = readyViewModel()
+        viewModel.startScan()
+        advanceTimeBy(CameraViewModel.SCAN_TIMEOUT + 1.milliseconds)
+        assertEquals(ScanUiState.NotFound, viewModel.uiState.value.scan)
+        assertEquals("No QR code found", viewModel.uiState.value.message)
+        advanceTimeBy(CameraViewModel.MESSAGE_DURATION + 1.milliseconds)
+        assertEquals(ScanUiState.Idle, viewModel.uiState.value.scan)
+        viewModel.onCodesScanned(listOf("late"))
+        runCurrent()
+        assertEquals(ScanUiState.Idle, viewModel.uiState.value.scan)
     }
 
     /** A [RecordingStarter] whose recording the test finishes or fails. */
