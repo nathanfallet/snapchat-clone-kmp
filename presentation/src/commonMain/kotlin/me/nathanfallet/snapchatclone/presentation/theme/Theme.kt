@@ -1,8 +1,10 @@
 package me.nathanfallet.snapchatclone.presentation.theme
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 /** The accent of the app: a bright yellow, for the shutter ring, buttons and highlights. */
@@ -14,7 +16,8 @@ val Recording = Color(0xFFFF3B5C)
 /** A translucent black, behind controls drawn over the camera. */
 val Scrim = Color(0x66000000)
 
-private val colorScheme = darkColorScheme(
+/** The colors of the app. */
+internal val AppColorScheme = darkColorScheme(
     primary = Accent,
     onPrimary = Color.Black,
     secondary = Color.White,
@@ -29,9 +32,17 @@ private val colorScheme = darkColorScheme(
 )
 
 /**
+ * The color of the text and icons that don't choose one. Outside of a `Surface`, Compose draws them in black by default,
+ * which is invisible on the black background of the app.
+ */
+internal val DefaultContentColor = AppColorScheme.onBackground
+
+/**
  * The theme of the app: dark, like a camera app, with a yellow accent.
  */
 @Composable
 fun SnapCloneTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(colorScheme = AppColorScheme) {
+        CompositionLocalProvider(LocalContentColor provides DefaultContentColor, content = content)
+    }
 }
