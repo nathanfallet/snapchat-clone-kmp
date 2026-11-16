@@ -16,7 +16,9 @@ import me.nathanfallet.snapchatclone.domain.models.MediaSource
 import me.nathanfallet.snapchatclone.domain.models.MemoryDraft
 import me.nathanfallet.snapchatclone.domain.models.MemoryType
 import me.nathanfallet.snapchatclone.domain.usecases.DiscardCaptureUseCase
+import me.nathanfallet.snapchatclone.domain.usecases.ReadCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.SaveMemoryUseCase
+import me.nathanfallet.snapchatclone.presentation.filters.PhotoFilterRenderer
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -32,14 +34,18 @@ import kotlin.time.TimeSource
  * calls as functions, and this ViewModel decides when to call them and what to do with their results.
  *
  * @param saveMemory Saves a snap to the Memories.
- * @param discardCapture Deletes the temporary files of a discarded snap.
+ * @param readCapture Reads the photo the camera wrote, to filter it.
+ * @param discardCapture Deletes the temporary files of the camera.
+ * @param photoFilterRenderer Applies the selected filter to photos, at full resolution.
  * @param clock Dates the captures.
  * @param timeSource Measures the duration of recordings.
  */
 @Suppress("TooGenericExceptionCaught", "TooManyFunctions")
 class CameraViewModel(
     private val saveMemory: SaveMemoryUseCase,
+    private val readCapture: ReadCaptureUseCase,
     private val discardCapture: DiscardCaptureUseCase,
+    private val photoFilterRenderer: PhotoFilterRenderer,
     private val clock: Clock,
     private val timeSource: TimeSource,
 ) : ViewModel() {
@@ -108,6 +114,8 @@ class CameraViewModel(
 
     /** Selects the next ([forward]) or previous filter, and shows its name briefly. */
     fun swipeFilter(forward: Boolean) {
+        // Videos are recorded without filter: the filter can't change while recording.
+        if (state.value.recording != null) return
         state.update {
             it.copy(filter = if (forward) it.filter.next() else it.filter.previous(), isFilterNameVisible = true)
         }
@@ -132,7 +140,7 @@ class CameraViewModel(
      * @param hasFlash Whether the current device has a flash (`CameraDevice.hasFlash`).
      * @param location Where the photo is taken, if known.
      * @param capture Captures the photo, with the device's flash if `useFlash`, and returns the path of the
-     * temporary file it was saved to.
+     * temporary file it was saved to. The selected filter is then applied to it.
      */
     fun takePhoto(hasFlash: Boolean, location: GeoPoint?, capture: suspend (useFlash: Boolean) -> String) {
         val current = state.value
@@ -147,14 +155,22 @@ class CameraViewModel(
                     delay(SCREEN_FLASH_DURATION)
                 }
                 val capturedAt = clock.now()
+                val filter = current.filter
                 val path = capture(plan.useDeviceFlash)
                 state.update { it.copy(isScreenFlashVisible = false) }
+                // The same shader as the preview, applied to the full-resolution photo (upright, with its EXIF
+                // orientation applied). The camera's file is no longer needed afterwards.
+                val filtered = try {
+                    photoFilterRenderer.render(readCapture(path), filter)
+                } finally {
+                    discardCapture(path)
+                }
                 val draft = MemoryDraft(
                     type = MemoryType.PHOTO,
-                    media = MediaSource.File(path),
+                    media = MediaSource.Bytes(filtered, "jpg"),
                     thumbnail = null,
                     capturedAt = capturedAt,
-                    filter = Filter.NORMAL,
+                    filter = filter,
                     location = location,
                     duration = null,
                 )
@@ -189,11 +205,12 @@ class CameraViewModel(
         state.update { it.copy(recording = RecordingUiState()) }
         viewModelScope.launch {
             try {
-                recordingThumbnail = thumbnail()
                 val stop = starter.start(
                     onFinished = { path -> viewModelScope.launch { onRecordingFinished(path) } },
                     onFailed = { error -> viewModelScope.launch { onRecordingFailed(error) } },
                 )
+                // Taken once the recording started: the preview then shows the frames without filter, like the video.
+                recordingThumbnail = thumbnail()
                 recordingMark = timeSource.markNow()
                 stopRecordingFunction = stop
                 progressJob = launch { trackProgress() }

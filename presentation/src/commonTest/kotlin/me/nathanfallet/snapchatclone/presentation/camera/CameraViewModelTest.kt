@@ -18,7 +18,9 @@ import me.nathanfallet.snapchatclone.domain.models.Memory
 import me.nathanfallet.snapchatclone.domain.models.MemoryDraft
 import me.nathanfallet.snapchatclone.domain.models.MemoryType
 import me.nathanfallet.snapchatclone.domain.usecases.DiscardCaptureUseCase
+import me.nathanfallet.snapchatclone.domain.usecases.ReadCaptureUseCase
 import me.nathanfallet.snapchatclone.domain.usecases.SaveMemoryUseCase
+import me.nathanfallet.snapchatclone.presentation.filters.PhotoFilterRenderer
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -59,7 +61,19 @@ class CameraViewModelTest {
             discarded += draft
         }
 
-        override suspend fun invoke(path: String) = Unit
+        override suspend fun invoke(path: String) {
+            deletedCaptures += path
+        }
+    }
+    private val captures = mutableMapOf("/tmp/photo.jpg" to byteArrayOf(1, 2, 3), "/tmp/selfie.jpg" to byteArrayOf(4))
+    private val deletedCaptures = mutableListOf<String>()
+    private val readCapture = object : ReadCaptureUseCase {
+        override suspend fun invoke(path: String): ByteArray = captures.getValue(path)
+    }
+    private val renderedFilters = mutableListOf<Filter>()
+    private val photoFilterRenderer = PhotoFilterRenderer { encoded, filter ->
+        renderedFilters += filter
+        encoded + byteArrayOf(filter.ordinal.toByte())
     }
     private val clock = object : Clock {
         override fun now() = now
@@ -71,12 +85,17 @@ class CameraViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun TestScope.readyViewModel() = CameraViewModel(
-        saveMemory,
-        discardCapture,
-        clock,
-        testScheduler.timeSource,
-    ).apply { onCameraReady(minZoom = 1.0, maxZoom = 20.0, zoom = 1.0) }
+    private fun TestScope.viewModel() = CameraViewModel(
+        saveMemory = saveMemory,
+        readCapture = readCapture,
+        discardCapture = discardCapture,
+        photoFilterRenderer = photoFilterRenderer,
+        clock = clock,
+        timeSource = testScheduler.timeSource,
+    )
+
+    private fun TestScope.readyViewModel() =
+        viewModel().apply { onCameraReady(minZoom = 1.0, maxZoom = 20.0, zoom = 1.0) }
 
     @Test
     fun flashUsesTheDeviceFlashOnTheBackAndTheScreenOnTheFront() {
@@ -114,9 +133,41 @@ class CameraViewModelTest {
         assertFalse(state.isCapturingPhoto)
         val draft = assertNotNull(state.snap).draft
         assertEquals(MemoryType.PHOTO, draft.type)
-        assertEquals(MediaSource.File("/tmp/photo.jpg"), draft.media)
+        assertEquals(listOf<Byte>(1, 2, 3, 0), (draft.media as MediaSource.Bytes).bytes.toList())
+        assertEquals("jpg", (draft.media as MediaSource.Bytes).extension)
         assertEquals(GeoPoint(1.0, 2.0), draft.location)
         assertEquals(now, draft.capturedAt)
+        // The camera's file was filtered, then deleted.
+        assertEquals(listOf(Filter.NORMAL), renderedFilters)
+        assertEquals(listOf("/tmp/photo.jpg"), deletedCaptures)
+    }
+
+    @Test
+    fun theSelectedFilterIsAppliedToThePhoto() = runTest(dispatcher) {
+        val viewModel = readyViewModel()
+        viewModel.swipeFilter(forward = true)
+        viewModel.takePhoto(hasFlash = false, location = null) { "/tmp/photo.jpg" }
+        advanceUntilIdle()
+        val draft = assertNotNull(viewModel.uiState.value.snap).draft
+        assertEquals(Filter.NORMAL.next(), draft.filter)
+        assertEquals(listOf(Filter.NORMAL.next()), renderedFilters)
+    }
+
+    @Test
+    fun theCaptureIsDeletedEvenIfTheFilterFails() = runTest(dispatcher) {
+        val viewModel = CameraViewModel(
+            saveMemory = saveMemory,
+            readCapture = readCapture,
+            discardCapture = discardCapture,
+            photoFilterRenderer = { _, _ -> error("Out of memory") },
+            clock = clock,
+            timeSource = testScheduler.timeSource,
+        ).apply { onCameraReady(minZoom = 1.0, maxZoom = 20.0, zoom = 1.0) }
+        viewModel.takePhoto(hasFlash = false, location = null) { "/tmp/photo.jpg" }
+        advanceTimeBy(1.seconds)
+        assertNull(viewModel.uiState.value.snap)
+        assertEquals("Couldn't take the photo: Out of memory", viewModel.uiState.value.message)
+        assertEquals(listOf("/tmp/photo.jpg"), deletedCaptures)
     }
 
     @Test
@@ -151,7 +202,7 @@ class CameraViewModelTest {
 
     @Test
     fun noCaptureBeforeTheCameraIsReady() = runTest(dispatcher) {
-        val viewModel = CameraViewModel(saveMemory, discardCapture, clock, testScheduler.timeSource)
+        val viewModel = viewModel()
         var captured = false
         viewModel.takePhoto(hasFlash = false, location = null) { "/tmp/p.jpg".also { captured = true } }
         advanceUntilIdle()
@@ -181,6 +232,30 @@ class CameraViewModelTest {
         assertTrue(duration >= 30.seconds && duration < 31.seconds, "Unexpected duration $duration")
         assertEquals(Filter.NORMAL, draft.filter)
         assertEquals(listOf<Byte>(1), draft.thumbnail?.toList())
+    }
+
+    @Test
+    fun thePreviewHasNoFilterWhileRecordingAndItsThumbnailIsTakenOnceStarted() = runTest(dispatcher) {
+        val viewModel = readyViewModel()
+        viewModel.swipeFilter(forward = true)
+        assertEquals(Filter.BLACK_AND_WHITE, viewModel.uiState.value.previewFilter)
+        val recorder = FakeRecorder()
+        var thumbnailTakenAfterStart: Boolean? = null
+        viewModel.startRecording(location = null, starter = recorder, thumbnail = {
+            thumbnailTakenAfterStart = recorder.started
+            null
+        })
+        assertEquals(Filter.NORMAL, viewModel.uiState.value.previewFilter)
+        runCurrent()
+        assertEquals(true, thumbnailTakenAfterStart)
+        // Swiping while recording doesn't change the filter.
+        viewModel.swipeFilter(forward = true)
+        assertEquals(Filter.BLACK_AND_WHITE, viewModel.uiState.value.filter)
+        viewModel.stopRecording()
+        runCurrent()
+        recorder.finish("/tmp/video.mp4")
+        runCurrent()
+        assertEquals(Filter.NORMAL, assertNotNull(viewModel.uiState.value.snap).draft.filter)
     }
 
     @Test
@@ -292,7 +367,7 @@ class CameraViewModelTest {
         viewModel.discardSnap()
         assertNull(viewModel.uiState.value.snap)
         runCurrent()
-        assertEquals(listOf<MediaSource>(MediaSource.File("/tmp/photo.jpg")), discarded.map { it.media })
+        assertEquals(1, discarded.size)
         assertTrue(saved.isEmpty())
     }
 

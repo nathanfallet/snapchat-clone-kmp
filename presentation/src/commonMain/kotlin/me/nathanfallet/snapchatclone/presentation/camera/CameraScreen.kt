@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import kotlinx.coroutines.launch
 import me.nathanfallet.snapchatclone.domain.models.CaptureRules
 import me.nathanfallet.snapchatclone.presentation.components.CircleIconButton
 import me.nathanfallet.snapchatclone.presentation.components.MessageBanner
+import me.nathanfallet.snapchatclone.presentation.filters.FilterPainter
 import me.nathanfallet.snapchatclone.presentation.snap.SnapPreviewScreen
 import me.nathanfallet.snapchatclone.presentation.theme.Accent
 import me.nathanfallet.snapchatclone.presentation.theme.AppIcons
@@ -142,6 +144,9 @@ private fun CameraContent(
     // The gestures are installed once: they read the latest state and callbacks through these.
     val currentState by rememberUpdatedState(state)
     val currentOnOpenMemories by rememberUpdatedState(onOpenMemories)
+    // Read on the Frame output's thread, which draws the preview: the painter compiles each filter's shader once.
+    val previewFilter by rememberUpdatedState(state.previewFilter)
+    val filterPainter = remember { FilterPainter() }
 
     // Applies the zoom of the ViewModel (pinch, slide while recording) to the camera.
     val controller = camera.controller
@@ -155,7 +160,7 @@ private fun CameraContent(
             device = device ?: position,
             isActive = isActive,
             onFrame = { frame, render ->
-                render { (frameTexture, canvas) -> canvas.drawImage(frameTexture, 0f, 0f) }
+                render { (frameTexture, canvas) -> filterPainter.draw(canvas, frameTexture, previewFilter) }
                 frame.dispose()
             },
             outputs = listOf(photoOutput, videoOutput),
@@ -187,6 +192,12 @@ private fun CameraContent(
 
         focusPoint?.let { FocusIndicator(it, onFinished = { focusPoint = null }) }
 
+        FilterName(
+            name = state.filter.displayName,
+            isVisible = state.isFilterNameVisible,
+            modifier = Modifier.align(Alignment.Center),
+        )
+
         CameraControls(
             state = state,
             device = device,
@@ -201,7 +212,8 @@ private fun CameraContent(
                         flashMode = if (useFlash) FlashMode.ON else FlashMode.OFF,
                         location = location,
                     )
-                    // Saved to a file, which carries the orientation (and mirroring) in its EXIF metadata.
+                    // Saved to a file, which carries the orientation (and mirroring) in its EXIF metadata: the
+                    // ViewModel then draws it upright with the selected filter, at full resolution.
                     photoOutput.capturePhoto(settings).use { it.saveToTemporaryFile() }
                 }
             },
@@ -328,6 +340,22 @@ private fun RecordingBadge(progress: Float, modifier: Modifier = Modifier) {
             .background(Recording, RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 4.dp),
     )
+}
+
+/** The name of the filter, shown briefly in the middle of the screen after a swipe. */
+@Composable
+private fun FilterName(name: String, isVisible: Boolean, modifier: Modifier = Modifier) {
+    AnimatedVisibility(visible = isVisible, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+        Text(
+            name,
+            color = Color.White,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Black,
+            style = MaterialTheme.typography.displaySmall.copy(
+                shadow = Shadow(color = Color.Black.copy(alpha = 0.5f), blurRadius = 12f),
+            ),
+        )
+    }
 }
 
 /** A ring shrinking where the user tapped to focus. */

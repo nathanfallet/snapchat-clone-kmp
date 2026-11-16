@@ -63,4 +63,10 @@ data class CameraUiState(
 
     /** The zoom to display (`1.0` for the neutral zoom), or `null` until the camera is ready. */
     val displayedZoom: Double? get() = zoom?.let { zoomRange?.displayed(it) }
+
+    /**
+     * The filter drawn on the preview: none while recording, since videos are recorded without filter (what is on
+     * screen is what is recorded).
+     */
+    val previewFilter: Filter get() = if (recording != null) Filter.NORMAL else filter
 }
