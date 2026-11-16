@@ -12,7 +12,12 @@ It is not a product: there is no account, no server, no sharing. Photos and vide
 
 ## Screenshots
 
-*Coming soon (from device tests).*
+| Camera | Live filter | Snap preview | Memories |
+| --- | --- | --- | --- |
+| <img src="docs/screenshots/ios-camera.png" width="200"> | <img src="docs/screenshots/ios-filter.png" width="200"> | <img src="docs/screenshots/ios-preview.png" width="200"> | <img src="docs/screenshots/ios-memories.png" width="200"> |
+| <img src="docs/screenshots/android-camera.png" width="200"> | <img src="docs/screenshots/android-filter.png" width="200"> | <img src="docs/screenshots/android-viewer.png" width="200"> | <img src="docs/screenshots/android-memories.png" width="200"> |
+
+Top row: iPhone 11 (front camera). Bottom row: Pixel 7a (the filter and viewer shots were taken in a dark room, with the flash on). People, screens and locations are blurred or hidden. The iPhone shots use the front camera orientation fix of [kmp-vision-camera#1](https://github.com/nathanfallet/kmp-vision-camera/pull/1), coming in the next release of the library.
 
 ## Features
 
