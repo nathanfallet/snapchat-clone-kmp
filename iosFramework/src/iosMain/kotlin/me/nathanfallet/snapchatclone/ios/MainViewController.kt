@@ -4,6 +4,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import me.nathanfallet.snapchatclone.data.dataModule
 import me.nathanfallet.snapchatclone.domain.domainModule
 import me.nathanfallet.snapchatclone.presentation.App
+import me.nathanfallet.snapchatclone.presentation.presentationModule
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatform
 import platform.UIKit.UIViewController
@@ -14,7 +15,7 @@ import platform.UIKit.UIViewController
 @Suppress("FunctionNaming")
 fun MainViewController(): UIViewController {
     if (KoinPlatform.getKoinOrNull() == null) {
-        startKoin { modules(domainModule, dataModule) }
+        startKoin { modules(domainModule, dataModule, presentationModule) }
     }
     return ComposeUIViewController { App() }
 }

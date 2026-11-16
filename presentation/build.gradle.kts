@@ -46,12 +46,14 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
+            implementation(libs.okio)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
         androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
             implementation(libs.media3.exoplayer)
             implementation(libs.media3.ui)
         }

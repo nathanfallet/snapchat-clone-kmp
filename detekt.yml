@@ -108,6 +108,8 @@ complexity:
   CyclomaticComplexMethod:
     active: true
     threshold: 15
+    # The branches of a Composable are its conditional UI and its callbacks' lambdas.
+    ignoreAnnotated: [ 'Composable' ]
     ignoreSingleWhenExpression: false
     ignoreSimpleWhenEntries: false
     ignoreNestingFunctions: false
@@ -139,6 +141,8 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: [ ]
+    # Composables take their state and callbacks as parameters (state hoisting).
+    ignoreAnnotated: [ 'Composable' ]
   MethodOverloading:
     active: false
     threshold: 6

@@ -3,6 +3,7 @@ package me.nathanfallet.snapchatclone.android
 import android.app.Application
 import me.nathanfallet.snapchatclone.data.dataModule
 import me.nathanfallet.snapchatclone.domain.domainModule
+import me.nathanfallet.snapchatclone.presentation.presentationModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -14,7 +15,7 @@ class SnapCloneApplication : Application() {
         super.onCreate()
         startKoin {
             androidContext(this@SnapCloneApplication)
-            modules(domainModule, dataModule)
+            modules(domainModule, dataModule, presentationModule)
         }
     }
 }
