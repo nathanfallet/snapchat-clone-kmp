@@ -1,0 +1,40 @@
+name: Build
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build the Android app, run the unit tests and detekt
+        run: ./gradlew :androidApp:assembleDebug testAndroidHostTest detekt
+  ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run the iOS tests and compile the shared iOS code
+        run: ./gradlew iosSimulatorArm64Test compileIosMainKotlinMetadata
+      - name: Build the iOS app
+        run: >
+          xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+          build CODE_SIGNING_ALLOWED=NO

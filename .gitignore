@@ -1,0 +1,20 @@
+.gradle
+.kotlin
+build/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+
+### IDE ###
+.idea
+*.iml
+.fleet
+.vscode/
+.DS_Store
+
+### Xcode ###
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+### Claude Code ###
+.claude/

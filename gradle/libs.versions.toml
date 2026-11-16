@@ -1,0 +1,60 @@
+[versions]
+# Aligned with KMP Vision Camera 1.0.0 (its gradle/libs.versions.toml).
+kotlin = "2.4.20"
+agp = "9.4.1"
+detekt = "1.23.8"
+android-compileSdk = "36"
+# The Skia module of KMP Vision Camera needs Android 9 (API 28): frames are read as hardware buffers.
+android-minSdk = "28"
+android-targetSdk = "36"
+compose-multiplatform = "1.11.1"
+compose-material3 = "1.9.0"
+kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.13.0"
+kotlinx-datetime = "0.8.0"
+okio = "3.18.2"
+koin = "4.2.2"
+jetbrains-lifecycle = "2.10.0"
+androidx-activity = "1.13.0"
+media3 = "1.11.1"
+# The latest Coil built on Compose Multiplatform 1.11 (3.6 needs 1.12, and compileSdk 37 on Android).
+coil = "3.5.0"
+visioncamera = "1.0.0"
+
+[plugins]
+multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+
+[libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+jetbrains-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jetbrains-lifecycle" }
+jetbrains-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jetbrains-lifecycle" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+# KMP Vision Camera, from Maven Central.
+visioncamera-core = { module = "me.nathanfallet.visioncamera:core", version.ref = "visioncamera" }
+visioncamera-compose = { module = "me.nathanfallet.visioncamera:compose", version.ref = "visioncamera" }
+visioncamera-barcode-compose = { module = "me.nathanfallet.visioncamera:barcode-compose", version.ref = "visioncamera" }
+visioncamera-location-compose = { module = "me.nathanfallet.visioncamera:location-compose", version.ref = "visioncamera" }
+visioncamera-skia-compose = { module = "me.nathanfallet.visioncamera:skia-compose", version.ref = "visioncamera" }
