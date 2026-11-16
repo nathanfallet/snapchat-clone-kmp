@@ -9,6 +9,7 @@
 
     <application
         android:name="me.nathanfallet.snapchatclone.android.SnapCloneApplication"
+        android:icon="@mipmap/ic_launcher"
         android:label="Snap Clone KMP"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity

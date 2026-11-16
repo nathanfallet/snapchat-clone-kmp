@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app icon: a shutter ring around a lens, on the app's yellow (drawn on the 108dp adaptive icon grid). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- The ring: a circle of radius 21, stroke 4.5 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#111111"
+        android:strokeWidth="4.5"
+        android:pathData="M54,30.75a23.25,23.25 0,1 0,0.0001 0z" />
+    <!-- The lens -->
+    <path
+        android:fillColor="#111111"
+        android:pathData="M54,42.4a11.6,11.6 0,1 0,0.0001 0z" />
+    <!-- The highlight on the lens -->
+    <path
+        android:fillColor="#FFE53B"
+        android:pathData="M58.8,45.6a3.6,3.6 0,1 0,0.0001 0z" />
+</vector>
